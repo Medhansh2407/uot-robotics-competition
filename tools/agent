@@ -57,6 +57,11 @@ case "${1:-help}" in
   claim)
     issue="${2:-}"; [ -n "$issue" ] || die "claim requires an issue number"
     load_identity
+    login="$(gh api user --jq .login)"
+    existing="$(gh issue view "$issue" --repo "$REPO" --json assignees --jq '.assignees[].login')"
+    if [ -n "$existing" ] && ! printf '%s\n' "$existing" | grep -qix "$login"; then
+      die "task #$issue is already assigned to: $(printf '%s' "$existing" | tr '\n' ' ')"
+    fi
     gh issue edit "$issue" --repo "$REPO" --add-assignee @me --add-label "role:$ROLE" >/dev/null
     set_status_label "$issue" active
     message claim "#$issue" @all "Claimed task #$issue."
@@ -78,6 +83,7 @@ case "${1:-help}" in
   done)
     issue="${2:-}"; text="${3:-}"; [ -n "$issue$text" ] || die "done requires <issue> <evidence>"
     set_status_label "$issue" done
+    gh issue close "$issue" --repo "$REPO" --reason completed >/dev/null
     message done "#$issue" @all "$text"
     ;;
   heartbeat)

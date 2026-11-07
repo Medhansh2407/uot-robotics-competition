@@ -15,7 +15,7 @@ Example:
 tools/agent init Medhansh coordinator
 ```
 
-The identity is stored locally in `.agent/identity` and is never committed. Different users and separate clones can run different roles simultaneously.
+The identity is stored locally in `.agent/identity` and is never committed. Different users and separate clones can run different roles simultaneously. If one person runs multiple agents concurrently, give each agent its own clone or Git worktree.
 
 ## Starting Codex
 

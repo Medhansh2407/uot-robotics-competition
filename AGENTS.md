@@ -36,7 +36,7 @@ Every Codex session declares one role. Role instructions live in `agents/roles/`
 - `autonomy-perception`
 - `integration-test`
 
-One human may run more than one role, but each active Codex session uses one role identity so messages remain attributable.
+One human may run more than one role, but each concurrently active role must use a separate clone or Git worktree. The local `.agent/identity` belongs to a working tree, so sharing one tree between role sessions would overwrite the identity and risk conflicting edits.
 
 ## Task states
 
