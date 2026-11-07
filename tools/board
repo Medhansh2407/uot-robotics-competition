@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+CONFIG="$ROOT/.agent-board"
+STATE_DIR="$ROOT/.board"
+
+config_value() {
+  local key="$1"
+  [ -f "$CONFIG" ] || return 1
+  sed -n "s/^${key}=//p" "$CONFIG" | head -1
+}
+
+REPO="${BOARD_REPO:-$(config_value BOARD_REPO || true)}"
+ISSUE="${BOARD_ISSUE:-$(config_value BOARD_ISSUE || true)}"
+REPO="${REPO:-Medhansh2407/uot-robotics-competition}"
+ISSUE="${ISSUE:-1}"
+
+die() { echo "board: $*" >&2; exit 1; }
+command -v gh >/dev/null 2>&1 || die "gh is required; install it and run gh auth login"
+
+me() { gh api user --jq .login 2>/dev/null || die "gh is not authenticated"; }
+b64decode() { base64 -d 2>/dev/null || base64 -D; }
+
+cursor_file() {
+  local login
+  login="$(me)"
+  mkdir -p "$STATE_DIR"
+  echo "$STATE_DIR/cursor-${REPO//\//_}-${ISSUE}-${login}"
+}
+
+rows() {
+  gh api --paginate "repos/$REPO/issues/$ISSUE/comments?per_page=100" \
+    --jq '.[] | "\(.id)\t\(.user.login)\t\(.created_at)\t\(.body | @base64)"'
+}
+
+render() {
+  local login="$1" id author created encoded body flag
+  while IFS=$'\t' read -r id author created encoded; do
+    [ -n "$id" ] || continue
+    body="$(printf '%s' "$encoded" | b64decode)"
+    flag=""
+    if printf '%s' "$body" | grep -qiE "(^|[^A-Za-z0-9_-])@(${login}|all)([^A-Za-z0-9_-]|$)"; then
+      flag=" MENTION"
+    fi
+    printf -- '--- @%s %s (#%s)%s\n%s\n' "$author" "$created" "$id" "$flag" "$body"
+  done
+}
+
+cmd_post() {
+  local message="${*:-}"
+  [ -n "$message" ] || message="$(cat)"
+  [ -n "$message" ] || die "post requires a message"
+  [[ "$message" == \[*\]* ]] || die "post must begin with [Human's Codex]"
+  gh issue comment "$ISSUE" --repo "$REPO" --body "$message" >/dev/null
+  echo "Posted to $REPO issue #$ISSUE."
+}
+
+cmd_read() {
+  local n="${1:-10}" login
+  [[ "$n" =~ ^[0-9]+$ ]] || die "read requires a numeric count"
+  login="$(me)"
+  rows | tail -n "$n" | render "$login"
+}
+
+cmd_unread() {
+  local login file last all new max
+  login="$(me)"
+  file="$(cursor_file)"
+  last="$(cat "$file" 2>/dev/null || echo 0)"
+  all="$(rows)"
+  new="$(printf '%s\n' "$all" | awk -F'\t' -v last="$last" '$1 + 0 > last + 0')"
+  [ -n "$new" ] || return 0
+  max="$(printf '%s\n' "$new" | tail -1 | cut -f1)"
+  printf '%s\n' "$max" > "$file"
+  printf '%s\n' "$new" | awk -F'\t' -v login="$login" 'tolower($2) != tolower(login)' | render "$login"
+}
+
+cmd_wait() {
+  local interval=15 timeout=0 start output
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --interval) interval="${2:?missing interval}"; shift 2 ;;
+      --timeout) timeout="${2:?missing timeout}"; shift 2 ;;
+      *) die "unknown wait argument: $1" ;;
+    esac
+  done
+  start="$(date +%s)"
+  echo "Waiting on $REPO issue #$ISSUE..."
+  while true; do
+    output="$(cmd_unread || true)"
+    if [ -n "$output" ]; then printf '%s\n' "$output"; return 0; fi
+    if [ "$timeout" -gt 0 ] && [ $(( $(date +%s) - start )) -ge "$timeout" ]; then return 124; fi
+    sleep "$interval"
+  done
+}
+
+case "${1:-help}" in
+  post) shift; cmd_post "$@" ;;
+  read) shift; [ "${1:-}" = "-n" ] && shift; cmd_read "${1:-10}" ;;
+  unread) cmd_unread ;;
+  wait) shift; cmd_wait "$@" ;;
+  whoami) echo "GitHub: $(me) | Board: $REPO#$ISSUE" ;;
+  help|*)
+    echo "Usage: tools/board <post|read|unread|wait|whoami>"
+    echo "  post \"[Human's Codex][agent:role][type:event] message\""
+    echo "  read -n 20"
+    echo "  unread"
+    echo "  wait [--interval 15] [--timeout 300]"
+    echo "  whoami"
+    ;;
+esac
+

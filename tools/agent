@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+IDENTITY="$ROOT/.agent/identity"
+BOARD="$ROOT/tools/board"
+REPO="Medhansh2407/uot-robotics-competition"
+VALID_ROLES="coordinator mechanical electrical embedded-controls autonomy-perception integration-test"
+
+die() { echo "agent: $*" >&2; exit 1; }
+
+valid_role() {
+  case " $VALID_ROLES " in *" $1 "*) return 0 ;; *) return 1 ;; esac
+}
+
+load_identity() {
+  [ -f "$IDENTITY" ] || die "not initialized; run tools/agent init <human> <role>"
+  HUMAN="$(sed -n '1p' "$IDENTITY")"
+  ROLE="$(sed -n '2p' "$IDENTITY")"
+  [ -n "$HUMAN" ] && valid_role "$ROLE" || die "invalid local identity"
+}
+
+message() {
+  local type="$1" task="$2" to="$3" text="$4"
+  load_identity
+  "$BOARD" post "[$HUMAN's Codex][agent:$ROLE][type:$type][task:$task][to:$to] $text"
+}
+
+set_status_label() {
+  local issue="$1" next="$2" current
+  for current in open active blocked review done; do
+    gh issue edit "$issue" --repo "$REPO" --remove-label "status:$current" >/dev/null 2>&1 || true
+  done
+  gh issue edit "$issue" --repo "$REPO" --add-label "status:$next" >/dev/null
+}
+
+case "${1:-help}" in
+  init)
+    human="${2:-}"; role="${3:-}"
+    [ -n "$human" ] || die "init requires a first name"
+    valid_role "$role" || die "role must be one of: $VALID_ROLES"
+    mkdir -p "$(dirname "$IDENTITY")"
+    printf '%s\n%s\n' "$human" "$role" > "$IDENTITY"
+    message online none @all "Agent online as GitHub user @$(gh api user --jq .login)."
+    ;;
+  identity)
+    load_identity
+    echo "Human: $HUMAN | Agent: $ROLE | GitHub: $(gh api user --jq .login)"
+    ;;
+  task)
+    load_identity
+    target_role="${2:-}"; title="${3:-}"; body="${4:-Acceptance criteria must be added before claiming.}"
+    valid_role "$target_role" || die "invalid target role"
+    [ -n "$title" ] || die "task requires: <role> <title> [body]"
+    gh issue create --repo "$REPO" --title "$title" --body "$body" --label "agent-task,status:open,role:$target_role"
+    ;;
+  claim)
+    issue="${2:-}"; [ -n "$issue" ] || die "claim requires an issue number"
+    load_identity
+    gh issue edit "$issue" --repo "$REPO" --add-assignee @me --add-label "role:$ROLE" >/dev/null
+    set_status_label "$issue" active
+    message claim "#$issue" @all "Claimed task #$issue."
+    ;;
+  update)
+    issue="${2:-}"; text="${3:-}"; [ -n "$issue$text" ] || die "update requires <issue> <message>"
+    message update "#$issue" @all "$text"
+    ;;
+  block)
+    issue="${2:-}"; to="${3:-}"; text="${4:-}"; [ -n "$issue$to$text" ] || die "block requires <issue> <to> <message>"
+    set_status_label "$issue" blocked
+    message blocked "#$issue" "$to" "$text"
+    ;;
+  handoff)
+    issue="${2:-}"; to="${3:-}"; text="${4:-}"; [ -n "$issue$to$text" ] || die "handoff requires <issue> <to> <message>"
+    set_status_label "$issue" review
+    message handoff "#$issue" "$to" "$text"
+    ;;
+  done)
+    issue="${2:-}"; text="${3:-}"; [ -n "$issue$text" ] || die "done requires <issue> <evidence>"
+    set_status_label "$issue" done
+    message done "#$issue" @all "$text"
+    ;;
+  heartbeat)
+    issue="${2:-none}"; text="${3:-active and monitoring the board}"
+    message heartbeat "$issue" @all "$text"
+    ;;
+  help|*)
+    echo "Usage: tools/agent <command>"
+    echo "  init <human> <role>"
+    echo "  identity"
+    echo "  task <role> <title> [body]"
+    echo "  claim <issue>"
+    echo "  update <issue> <message>"
+    echo "  block <issue> <to> <message>"
+    echo "  handoff <issue> <to> <message>"
+    echo "  done <issue> <evidence>"
+    echo "  heartbeat [issue] [message]"
+    ;;
+esac
+

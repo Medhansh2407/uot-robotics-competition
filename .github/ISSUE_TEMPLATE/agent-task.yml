@@ -1,0 +1,40 @@
+name: Agent task
+description: A claimable unit of work for one Codex role
+title: "[Task] "
+labels: ["agent-task", "status:open"]
+body:
+  - type: dropdown
+    id: role
+    attributes:
+      label: Primary role
+      options:
+        - coordinator
+        - mechanical
+        - electrical
+        - embedded-controls
+        - autonomy-perception
+        - integration-test
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Required outcome
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and interfaces
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: List observable, verifiable pass conditions.
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Hardware or safety constraints
+
