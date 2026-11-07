@@ -1,0 +1,3 @@
+interface:
+  display_name: "Robot Integration Test"
+  short_description: "Verify robot behavior from unit test to field run"

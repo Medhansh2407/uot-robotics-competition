@@ -1,0 +1,3 @@
+interface:
+  display_name: "Competition Coordinator"
+  short_description: "Coordinate tasks, dependencies, handoffs, and readiness"

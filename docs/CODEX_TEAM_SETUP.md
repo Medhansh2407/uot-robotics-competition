@@ -25,6 +25,8 @@ Open the repository in Codex and use this first prompt:
 
 Codex automatically reads repository `AGENTS.md` instructions. There are intentionally no Claude hooks or Claude-specific files.
 
+Codex also discovers the project-scoped skills in `.agents/skills/`. Teammates can invoke a role explicitly, for example `$robot-mechanical-design`, or let Codex select it from the request.
+
 ## Daily operating loop
 
 1. Coordinator creates task issues with `tools/agent task`.

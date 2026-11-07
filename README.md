@@ -12,6 +12,8 @@ Codex-native multi-user agent workspace for the University of Toronto robotics c
 
 Start with [AGENTS.md](AGENTS.md) and [the Codex team setup](docs/CODEX_TEAM_SETUP.md).
 
+The shared operating standards are [the competition cadence](docs/COMPETITION_CADENCE.md), [commit standards](docs/COMMIT_STANDARDS.md), and the project-scoped skills under `.agents/skills/`.
+
 ```bash
 gh auth login
 tools/board whoami

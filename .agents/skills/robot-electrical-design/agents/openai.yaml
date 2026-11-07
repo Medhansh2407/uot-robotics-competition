@@ -1,0 +1,3 @@
+interface:
+  display_name: "Robot Electrical Design"
+  short_description: "Design power, wiring, pinouts, and safe bring-up"

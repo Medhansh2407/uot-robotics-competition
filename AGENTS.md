@@ -2,6 +2,8 @@
 
 This repository is operated by multiple people, each using Codex. Read this file before every task.
 
+Project skills live in `.agents/skills/`. Use the matching skill for competition intake, coordination, code delivery, domain engineering, integration, and physical safety. The competition brief is not available yet; never invent rules or hardware facts.
+
 ## Start every Codex session
 
 1. Run `tools/agent identity`. If unconfigured, run `tools/agent init <human-first-name> <role>`.
@@ -9,6 +11,7 @@ This repository is operated by multiple people, each using Codex. Read this file
 3. Claim a GitHub task with `tools/agent claim <issue-number>` before doing the work.
 4. Keep one `tools/board wait --timeout 300` running while actively working. Re-run it after it returns.
 5. Run `tools/board unread` before commits, after merges, and before ending the session.
+6. Follow `docs/COMPETITION_CADENCE.md` and `docs/COMMIT_STANDARDS.md`.
 
 Codex does not have Claude-style repository hooks. These commands are the portable coordination mechanism for every teammate's Codex session.
 
@@ -35,6 +38,18 @@ Every Codex session declares one role. Role instructions live in `agents/roles/`
 - `embedded-controls`
 - `autonomy-perception`
 - `integration-test`
+
+| Work | Required project skill |
+|---|---|
+| Rules, rubric, organizer changes | `$competition-intake` |
+| Planning, assignment, critical path | `$competition-coordinator` |
+| Coding, debugging, tests, commits | `$competition-code-delivery` |
+| Mechanisms and CAD | `$robot-mechanical-design` |
+| Power, wiring, sensors, pinouts | `$robot-electrical-design` |
+| Firmware, drivers, motor control | `$robot-embedded-controls` |
+| Vision, planning, autonomy | `$robot-autonomy-perception` |
+| Verification and readiness | `$robot-integration-test` |
+| Physical or hazardous action | `$robot-safety-gate` |
 
 One human may run more than one role, but each concurrently active role must use a separate clone or Git worktree. The local `.agent/identity` belongs to a working tree, so sharing one tree between role sessions would overwrite the identity and risk conflicting edits.
 
