@@ -31,3 +31,12 @@ Available roles:
 - `integration-test`
 
 The live board is [issue #1](https://github.com/Medhansh2407/uot-robotics-competition/issues/1).
+
+## AdaptiveServe demand forecasting
+
+The PyTorch prototype forecasts P10, P50, and P90 next-day demand for each planned menu item. See [the architecture](docs/MODEL_ARCHITECTURE.md) and [the data-collection protocol](docs/DATA_COLLECTION.md).
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 -m adaptive_serve.train --epochs 60 --output artifacts/demand_model.pt
+```

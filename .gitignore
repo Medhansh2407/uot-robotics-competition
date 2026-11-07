@@ -1,3 +1,6 @@
 .board/
 .agent/
+__pycache__/
+*.py[cod]
+artifacts/
 
